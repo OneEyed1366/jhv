@@ -9,8 +9,12 @@ interface IProps {
  * */
 export default function ApolloLayer({ children }: IProps): JSX.Element {
   const client = new ApolloClient({
-    uri: "http://152.228.215.94:81/api",
+    uri: "/api",
     cache: new InMemoryCache(),
+    credentials: "include",
+    headers: {
+      authorization: `Bearer ${process.env.REACT_APP_APOLLO_TOKEN}`,
+    },
   });
 
   return <ApolloProvider client={client}>{children}</ApolloProvider>;

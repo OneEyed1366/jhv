@@ -1,5 +1,6 @@
+import { gql, useQuery } from "@apollo/client";
 import { createFilterOptions, FilterOptionsState } from "@mui/material";
-import { ChangeEvent, Fragment, lazy, useState } from "react";
+import { ChangeEvent, Fragment, lazy, useEffect, useState } from "react";
 import { ICompanyPosition, ICompanyRelation } from "../..";
 import AddNewUserCustomAutocomplete from "../../atoms/CustomAutocomplete";
 import AddNewUserNoElementDialog from "../../atoms/NoElementDialog";
@@ -10,63 +11,61 @@ type IProps = Record<string, any>;
 export default function AddNewUserAutocompleteFooter({
   ...etc
 }: IProps): JSX.Element {
+  const [localRelationsData, setLocalRelationsData] = useState<
+    ICompanyRelation[]
+  >([]);
+  const [localPositionsData, setLocalPositionsData] = useState<
+    ICompanyPosition[]
+  >([]);
   const [companyRelation, setCompanyRelation] =
     useState<ICompanyRelation | null>(null);
   const [companyPosition, setCompanyPosition] =
     useState<ICompanyPosition | null>(null);
-  const [isInnerDialogOpened, setIsInnerDialogOpened] = useState(false);
+  const [isRelationsDialogOpened, setIsRelationsDialogOpened] = useState(false);
+  const [isPositionsDialogOpened, setIsPositioinsDialogOpened] =
+    useState(false);
   const [innerDialogValue, setInnerDialogValue] = useState<ICompanyRelation>({
     id: Math.floor(Math.random() * 100),
     name: "",
   });
-  const [mockICompanyRelationOptions, setMockICompanyRelationOptions] =
-    useState<ICompanyRelation[]>([
-      { id: 1, name: "Apple" },
-      { id: 2, name: "Microsoft" },
-      { id: 3, name: "Google" },
-    ]);
-  const [mockICompanyPositionOptions, setMockICompanyPositionOptions] =
-    useState<ICompanyRelation[]>([
-      { id: 0, name: "Trainee" },
-      { id: 1, name: "Junior" },
-      { id: 2, name: "Middle" },
-      { id: 3, name: "Middle+" },
-      { id: 4, name: "Senior" },
-    ]);
+
+  const companyRelationGql = gql`
+    query {
+      applicantIndividualCompanyRelations {
+        data {
+          id
+          name
+        }
+      }
+    }
+  `;
+
+  const companyPositionGql = gql`
+    query {
+      applicantIndividualCompanyPositions {
+        data {
+          id
+          name
+        }
+      }
+    }
+  `;
+
+  const {
+    loading: relationsLoading,
+    error: relationsError,
+    data: relationsData,
+  } = useQuery(companyRelationGql);
+  const {
+    loading: positionsLoading,
+    error: positionsError,
+    data: positionsData,
+  } = useQuery(companyPositionGql);
 
   const companyRelationFilter = createFilterOptions<ICompanyRelation>();
+  const companyPositionFilter = createFilterOptions<ICompanyPosition>();
 
-  const onGetOptionsLabel = (option: ICompanyRelation | string): string => {
-    // e.g value selected with enter, right from the input
-    if (typeof option === "string") {
-      return option;
-    }
-
-    if (option.inputValue) {
-      return option.inputValue;
-    }
-
-    return option.name;
-  };
-
-  const onUserPositionFilterFunction = (
-    options: ICompanyPosition[],
-    params: FilterOptionsState<ICompanyPosition>
-  ) => {
-    const filtered = companyRelationFilter(options, params);
-
-    if (params.inputValue) {
-      filtered.push({
-        id: -999999,
-        name: `Add "${params.inputValue}"`,
-        inputValue: params.inputValue,
-      });
-    }
-
-    return filtered;
-  };
-
-  const onUserCompanyFilterFunction = (
+  const onUserRelationFilterFunction = (
     options: ICompanyRelation[],
     params: FilterOptionsState<ICompanyRelation>
   ) => {
@@ -83,18 +82,48 @@ export default function AddNewUserAutocompleteFooter({
     return filtered;
   };
 
+  const onUserPositionFilterFunction = (
+    options: ICompanyPosition[],
+    params: FilterOptionsState<ICompanyPosition>
+  ) => {
+    const filtered = companyPositionFilter(options, params);
+
+    if (params.inputValue) {
+      filtered.push({
+        id: -999999,
+        name: `Add "${params.inputValue}"`,
+        inputValue: params.inputValue,
+      });
+    }
+
+    return filtered;
+  };
+
+  const onGetOptionsLabel = (option: ICompanyRelation | string): string => {
+    // e.g value selected with enter, right from the input
+    if (typeof option === "string") {
+      return option;
+    }
+
+    if (option.inputValue) {
+      return option.inputValue;
+    }
+
+    return option.name;
+  };
+
   const onUserPositionChange = (event: any, newValue: any) => {
     if (typeof newValue === "string") {
       // timeout to avoid instant validation of the dialog's form.
       setTimeout(() => {
-        setIsInnerDialogOpened(true);
+        setIsPositioinsDialogOpened(true);
         setInnerDialogValue({
           ...innerDialogValue,
           name: newValue,
         });
       });
     } else if (newValue && newValue.inputValue) {
-      setIsInnerDialogOpened(true);
+      setIsPositioinsDialogOpened(true);
       setInnerDialogValue({
         ...innerDialogValue,
         name: newValue.inputValue,
@@ -108,14 +137,14 @@ export default function AddNewUserAutocompleteFooter({
     if (typeof newValue === "string") {
       // timeout to avoid instant validation of the dialog's form.
       setTimeout(() => {
-        setIsInnerDialogOpened(true);
+        setIsRelationsDialogOpened(true);
         setInnerDialogValue({
           ...innerDialogValue,
           name: newValue,
         });
       });
     } else if (newValue && newValue.inputValue) {
-      setIsInnerDialogOpened(true);
+      setIsRelationsDialogOpened(true);
       setInnerDialogValue({
         ...innerDialogValue,
         name: newValue.inputValue,
@@ -134,38 +163,59 @@ export default function AddNewUserAutocompleteFooter({
 
   const onInnerModalCompanySubmit = () => {
     setCompanyRelation(innerDialogValue);
-    setMockICompanyRelationOptions((previous) => [
-      ...previous,
-      innerDialogValue,
-    ]);
+    setLocalRelationsData((previous) => [...previous, innerDialogValue]);
   };
 
   const onInnerModalPositionSubmit = () => {
     setCompanyPosition(innerDialogValue);
-    setMockICompanyPositionOptions((previous) => [
-      ...previous,
-      innerDialogValue,
-    ]);
+    setLocalPositionsData((previous) => [...previous, innerDialogValue]);
   };
 
-  const onInnerModalClose = () => {
-    setIsInnerDialogOpened(false);
+  const onDialogRelationsClose = () => {
+    setIsRelationsDialogOpened(false);
   };
+
+  const onDialogPositionsClose = () => {
+    setIsPositioinsDialogOpened(false);
+  };
+
+  useEffect(() => {
+    if (positionsData) {
+      setLocalPositionsData(
+        positionsData.applicantIndividualCompanyPositions.data
+      );
+    }
+
+    if (relationsData) {
+      setLocalRelationsData(
+        relationsData.applicantIndividualCompanyRelations.data
+      );
+    }
+  }, [positionsData, relationsData]);
+
+  if (positionsLoading || relationsLoading) {
+    return <h1>Loading...</h1>;
+  }
+
+  if (positionsError || relationsError) {
+    return <h1>Error! {positionsError?.message || relationsError?.message}</h1>;
+  }
+
   return (
     <Fragment>
       <AddNewUserCustomAutocomplete<ICompanyRelation | null>
         title="Relation to the Company"
         onChange={onUserCompanyChange}
-        onFilter={onUserCompanyFilterFunction}
+        onFilter={onUserRelationFilterFunction}
         onGetLabel={onGetOptionsLabel}
-        options={mockICompanyRelationOptions}
+        options={localRelationsData}
         value={companyRelation}
       >
         <AddNewUserNoElementDialog
           title="Введите название новой компании"
           value={innerDialogValue.name}
-          isOpened={isInnerDialogOpened}
-          onClose={onInnerModalClose}
+          isOpened={isRelationsDialogOpened}
+          onClose={onDialogRelationsClose}
           onSubmit={onInnerModalCompanySubmit}
           onChange={onInnerModalChange}
         />
@@ -175,14 +225,14 @@ export default function AddNewUserAutocompleteFooter({
         onChange={onUserPositionChange}
         onFilter={onUserPositionFilterFunction}
         onGetLabel={onGetOptionsLabel}
-        options={mockICompanyPositionOptions}
+        options={localPositionsData}
         value={companyPosition}
       >
         <AddNewUserNoElementDialog
           title="Введите название новой позиции внутри компании"
           value={innerDialogValue.name}
-          isOpened={isInnerDialogOpened}
-          onClose={onInnerModalClose}
+          isOpened={isPositionsDialogOpened}
+          onClose={onDialogPositionsClose}
           onSubmit={onInnerModalPositionSubmit}
           onChange={onInnerModalChange}
         />
