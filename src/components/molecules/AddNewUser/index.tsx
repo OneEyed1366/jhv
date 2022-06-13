@@ -1,10 +1,17 @@
 import { lazy, useMemo, useState } from "react";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
-import { Button, DialogActions, SelectChangeEvent, Stack } from "@mui/material";
+import {
+  Button,
+  DialogActions,
+  Divider,
+  SelectChangeEvent,
+  Stack,
+} from "@mui/material";
 import AddNewUserSelectEntity, { IEntity } from "./atoms/SelectEntity";
 import { AsyncAddNewUserCompanyEntity } from "./templates/Company";
 import { AsyncAddNewUserEntity } from "./templates/User";
+import AddNewUserAutocompleteFooter from "./organisms/Autocomplete";
 
 interface IProps {
   /**True - модальное окно открыто, false - закрыто*/
@@ -60,6 +67,8 @@ export default function AddNewUser({ onClose, isOpened }: IProps) {
           onChange={onSelectEntity}
         />
         {computedTemplate}
+        <Divider />
+        <AddNewUserAutocompleteFooter />
       </Stack>
       <DialogActions>
         <Button onClick={onExit}>Cancel</Button>
